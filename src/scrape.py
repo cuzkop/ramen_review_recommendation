@@ -66,8 +66,8 @@ class Scrape:
             print('{} -> {}'.format(self.store_id_num, store_name))
         
         self.store_name = store_name.strip()
-        print(self.store_name)
-        exit()
+
+        store_genre = soup.find('div', class_='rdheader-subinfo').find_all('dl')[1].find('span').text
 
         exit()
 
