@@ -15,6 +15,7 @@ class Scrape:
         self.columns = ['store_id', 'store_name', 'score', 'pref', 'review_cnt', 'review']
         self.df = pd.DataFrame(columns=self.columns)
         self.__regexcomp = re.compile(r'\n|\s')
+        self.genre_list = ['ラーメン', 'つけ麺']
 
         page_num = begin_page
 
@@ -68,8 +69,36 @@ class Scrape:
         self.store_name = store_name.strip()
 
         store_genre = soup.find('div', class_='rdheader-subinfo').find_all('dl')[1].find('span').text
+        if store_genre not in self.genre_list:
+            print('not ラーメン or つけ麺')
+            self.store_id_num -= 1
+            return
 
+        ranting = soup.find('span', class_='rdheader-rating__score-val-dtl').text
+        print('評価点数 : {}'.format(ranting))
+        self.score = ranting
+
+        if self.score == '-':
+            print('評価なしのため除外')
+            self.store_id_num -= 1
+            return
+
+        if float(self.score) < 3.0:
+            print('3.0未満のため除外')
+            self.store_id_num -= 1
+            return
+
+        review_href = soup.find('li', id='rdnavi-review').find('a', class_='mainnavi').get('href')
+        # print(review_url)
+
+        review_url = review_href + '?pal=tokyo&rcd=13162681&srt=&sby=&smp=1&use_type=0&rvw_part=all&lc=2'
+        self.scrape_review(review_url)
+
+
+    def scrape_review(self, review_url):
+        # pass
         exit()
-
+# ?pal=tokyo&rcd=13162681&srt=&sby=&smp=1&use_type=0&rvw_part=all&lc=2
+# https://tabelog.com/tokyo/A1326/A132601/13162681/dtlrvwlst/?pal=tokyo&rcd=13162681&srt=&sby=&smp=1&use_type=0&rvw_part=all&lc=2
 
 Scrape(base_url="https://tabelog.com/tokyo/rstLst/ramen/",test_mode=True)
