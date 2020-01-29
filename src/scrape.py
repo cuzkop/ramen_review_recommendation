@@ -123,6 +123,7 @@ class Scrape:
 
     def make_df(self):
         self.df.append([self.store_id, self.store_name, self.score, self.pred, self.review_cnt, self.review])
+        exit()
 
 
 # ?pal=tokyo&rcd=13162681&srt=&sby=&smp=1&use_type=0&rvw_part=all&lc=2
