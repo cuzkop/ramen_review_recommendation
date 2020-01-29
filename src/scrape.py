@@ -13,6 +13,7 @@ class Scrape:
         self.pref = pref
         self.review_cnt = 0
         self.columns = ['store_id', 'store_name', 'score', 'pref', 'review_cnt', 'review']
+        self.review = ''
         self.df = pd.DataFrame(columns=self.columns)
         self.__regexcomp = re.compile(r'\n|\s')
         self.genre_list = ['ラーメン', 'つけ麺']
@@ -89,15 +90,41 @@ class Scrape:
             return
 
         review_href = soup.find('li', id='rdnavi-review').find('a', class_='mainnavi').get('href')
-        # print(review_url)
 
         review_url = review_href + '?pal=tokyo&rcd=13162681&srt=&sby=&smp=1&use_type=0&rvw_part=all&lc=2'
         self.scrape_review(review_url)
 
 
     def scrape_review(self, review_url):
-        # pass
+        r = requests.get(review_url)
+        if r.status_code != requests.codes.ok:
+            print(f'error:not found{ review_url }')
+            return
+
+        soup = BeautifulSoup(r.content, 'html.parser')
+        target_items = soup.find_all('div', class_='rvw-item')
+        self.review_cnt = len(target_items)
+        for item in target_items:
+            self.review += self.get_review(item.get('data-detail-url'))
+
+        self.make_df()
+
+    def get_review(self, url):
+        print(str(self.store_id_num).zfill(8))
         exit()
+        r = requests.get('https://tabelog.com' + url)
+        if r.status_code != requests.codes.ok:
+            print(f'error:not found{ url }')
+            return ''
+
+        soup = BeautifulSoup(r.content, 'html.parser')
+        comment = soup.find('div', class_='rvw-item__rvw-comment').find('p').text
+        return comment.strip()
+
+    def make_df(self):
+        self.df.append([self.store_id, self.store_name, self.score, self.pred, self.review_cnt, self.review])
+
+
 # ?pal=tokyo&rcd=13162681&srt=&sby=&smp=1&use_type=0&rvw_part=all&lc=2
 # https://tabelog.com/tokyo/A1326/A132601/13162681/dtlrvwlst/?pal=tokyo&rcd=13162681&srt=&sby=&smp=1&use_type=0&rvw_part=all&lc=2
 
