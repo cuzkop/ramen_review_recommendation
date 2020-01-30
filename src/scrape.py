@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import re
 import pandas as pd
 import time
+import os
 
 class Scrape:
     def __init__(self, base_url, test_mode = False, pref = '東京都内', begin_page = 1, end_page = 10):
@@ -12,11 +13,12 @@ class Scrape:
         self.score = 0
         self.pref = pref
         self.review_cnt = 0
-        self.columns = ['store_id', 'store_name', 'score', 'pref', 'review_cnt', 'review']
+        self.columns = ['store_id', 'store_name', 'score', 'pref', 'station', 'review_cnt', 'review']
         self.review = ''
         self.df = pd.DataFrame(columns=self.columns)
         self.__regexcomp = re.compile(r'\n|\s')
         self.genre_list = ['ラーメン', 'つけ麺']
+        self.station = ''
 
         page_num = begin_page
 
@@ -34,9 +36,16 @@ class Scrape:
 
                 page_num += 1
 
+
+        # path = os.getcwd()
+
+        # print(path)
+        self.df.to_csv('../csv/review.csv')
+
         return
 
     def scrape_list(self, list_url, mode):
+        self.review = ''
         r = requests.get(list_url)
         if r.status_code != requests.codes.ok:
             return False
@@ -52,11 +61,16 @@ class Scrape:
                 item_url = soup_a.get('href')
                 self.store_id_num += 1
                 self.score_item(item_url, mode)
-                print(item_url)
+        else:
+            for soup_a in soup_a_list:
+                item_url = soup_a.get('href') # 店の個別ページURLを取得
+                self.store_id_num += 1
+                self.score_item(item_url, mode)
 
 
     def score_item(self, item_url, mode):
         start = time.time()
+        self.review = ''
         r = requests.get(item_url)
         if r.status_code != requests.codes.ok:
             print(f'error:not found{ item_url }')
@@ -76,8 +90,10 @@ class Scrape:
             return
 
         ranting = soup.find('span', class_='rdheader-rating__score-val-dtl').text
-        print('評価点数 : {}'.format(ranting))
+        station = soup.find('div', class_='rdheader-subinfo').find_all('dl')[0].find('span').text
+        print('評価点数 : {}, 最寄駅 : {}'.format(ranting, station))
         self.score = ranting
+        self.station = station
 
         if self.score == '-':
             print('評価なしのため除外')
@@ -91,7 +107,8 @@ class Scrape:
 
         review_href = soup.find('li', id='rdnavi-review').find('a', class_='mainnavi').get('href')
 
-        review_url = review_href + '?pal=tokyo&rcd=13162681&srt=&sby=&smp=1&use_type=0&rvw_part=all&lc=2'
+        review_url = review_href + '?pal=tokyo&rcd=' + review_href.split('/')[6] + '&srt=&sby=&smp=1&use_type=0&rvw_part=all&lc=2'
+
         self.scrape_review(review_url)
 
 
@@ -106,12 +123,11 @@ class Scrape:
         self.review_cnt = len(target_items)
         for item in target_items:
             self.review += self.get_review(item.get('data-detail-url'))
+            break
 
         self.make_df()
 
     def get_review(self, url):
-        print(str(self.store_id_num).zfill(8))
-        exit()
         r = requests.get('https://tabelog.com' + url)
         if r.status_code != requests.codes.ok:
             print(f'error:not found{ url }')
@@ -122,11 +138,11 @@ class Scrape:
         return comment.strip()
 
     def make_df(self):
-        self.df.append([self.store_id, self.store_name, self.score, self.pred, self.review_cnt, self.review])
-        exit()
+        se = pd.Series([self.store_id_num, self.store_name, self.score, self.pref, self.station, self.review_cnt, self.review], index=self.columns)
+        self.df = self.df.append(se, self.columns)
 
 
 # ?pal=tokyo&rcd=13162681&srt=&sby=&smp=1&use_type=0&rvw_part=all&lc=2
 # https://tabelog.com/tokyo/A1326/A132601/13162681/dtlrvwlst/?pal=tokyo&rcd=13162681&srt=&sby=&smp=1&use_type=0&rvw_part=all&lc=2
 
-Scrape(base_url="https://tabelog.com/tokyo/rstLst/ramen/",test_mode=True)
+Scrape(base_url="https://tabelog.com/tokyo/rstLst/ramen/",test_mode=False)
