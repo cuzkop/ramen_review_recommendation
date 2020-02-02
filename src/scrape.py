@@ -37,9 +37,6 @@ class Scrape:
                 page_num += 1
 
 
-        # path = os.getcwd()
-
-        # print(path)
         self.df.to_csv('../csv/review.csv')
 
         return
@@ -67,9 +64,10 @@ class Scrape:
                 self.store_id_num += 1
                 self.score_item(item_url, mode)
 
+        return True
+
 
     def score_item(self, item_url, mode):
-        start = time.time()
         self.review = ''
         r = requests.get(item_url)
         if r.status_code != requests.codes.ok:
