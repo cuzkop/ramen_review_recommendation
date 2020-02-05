@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import pandas as pd
-import time
+import datetime
 import os
 
 class Scrape:
@@ -29,9 +29,11 @@ class Scrape:
             while True:
                 list_url = base_url + str(page_num) + '/?Srt=D&SrtT=rt&sort_mode=1'
                 if self.scrape_list(list_url, mode=test_mode) != True:
+                    print('scrape is not True')
                     break
 
                 if page_num >= end_page:
+                    print('page_num >= end_page')
                     break
 
                 page_num += 1
@@ -45,12 +47,14 @@ class Scrape:
         self.review = ''
         r = requests.get(list_url)
         if r.status_code != requests.codes.ok:
+            print('scrape_list status code is not 200. status code is ' + r.status_code)
             return False
 
         soup = BeautifulSoup(r.content, 'html.parser')
         soup_a_list = soup.find_all('a', class_='list-rst__rst-name-target')
 
         if len(soup_a_list) < 1:
+            print('soup_a_list < 1')
             return False
 
         if mode:
@@ -68,6 +72,8 @@ class Scrape:
 
 
     def score_item(self, item_url, mode):
+        if self.store_id_num < 101:
+            return
         self.review = ''
         r = requests.get(item_url)
         if r.status_code != requests.codes.ok:
@@ -78,6 +84,9 @@ class Scrape:
         store_name = soup.find('h2', class_='display-name').find('span').string
         if self.store_id_num % 10 == 0:
             print('{} -> {}'.format(self.store_id_num, store_name))
+
+        if self.store_id_num % 100 == 0:
+            self.df.to_csv('../csv/review_{}.csv'.format(self.store_id_num))
         
         self.store_name = store_name.strip()
 
@@ -98,14 +107,9 @@ class Scrape:
             self.store_id_num -= 1
             return
 
-        if float(self.score) < 3.0:
-            print('3.0未満のため除外')
-            self.store_id_num -= 1
-            return
-
         review_href = soup.find('li', id='rdnavi-review').find('a', class_='mainnavi').get('href')
 
-        review_url = review_href + '?pal=tokyo&rcd=' + review_href.split('/')[6] + '&srt=&sby=&smp=1&use_type=0&rvw_part=all&lc=2'
+        review_url = review_href + '?pal=tokyo&rcd=' + review_href.split('/')[6] + '&srt=&sby=&smp=1&use_type=0&rvw_part=all&lc=0'
 
         self.scrape_review(review_url)
 
@@ -119,9 +123,14 @@ class Scrape:
         soup = BeautifulSoup(r.content, 'html.parser')
         target_items = soup.find_all('div', class_='rvw-item')
         self.review_cnt = len(target_items)
+        cnt = 0
         for item in target_items:
+            now = datetime.datetime.now()
+            cnt+=1
+            if cnt%10 == 0:
+                print('cnt is {}, current_time is {}'.format(cnt, now.strftime('%H:%M:%S')))
             self.review += self.get_review(item.get('data-detail-url'))
-            break
+            # break
 
         self.make_df()
 
@@ -143,4 +152,4 @@ class Scrape:
 # ?pal=tokyo&rcd=13162681&srt=&sby=&smp=1&use_type=0&rvw_part=all&lc=2
 # https://tabelog.com/tokyo/A1326/A132601/13162681/dtlrvwlst/?pal=tokyo&rcd=13162681&srt=&sby=&smp=1&use_type=0&rvw_part=all&lc=2
 
-Scrape(base_url="https://tabelog.com/tokyo/rstLst/ramen/",test_mode=False)
+Scrape(base_url="https://tabelog.com/tokyo/rstLst/ramen/",test_mode=False, end_page=60)
