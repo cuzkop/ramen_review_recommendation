@@ -1,0 +1,20 @@
+version: '3.4'
+services:
+  web: 
+    image: nginx:1.15
+    links:
+      - app
+    depends_on:
+      - app
+    volumes:
+      - ./default.conf:/etc/nginx/conf.d/default.conf
+      - ../:/usr/local/ramen_recommend
+    ports:
+      - "8888:80"
+  app:
+    build: .
+    tty: true
+    working_dir: /usr/local/ramen_recommend
+    volumes:
+      - ../:/usr/local/ramen_recommend
+      - ./requirements.txt:/usr/local/ramen_recommend/docker/requirements.txt
