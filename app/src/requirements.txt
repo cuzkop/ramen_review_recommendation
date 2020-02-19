@@ -1,0 +1,7 @@
+redis
+pandas
+Flask
+line-bot-sdk
+MySQLdb
+Flask-API
+mecab-python3
